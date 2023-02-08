@@ -15,15 +15,16 @@ load_dotenv()
 token = os.environ.get('token')
 chatid = os.environ.get('chatid')
 preview = os.environ.get('preview')
-bot = telegram.Bot(token = token)
 logger=set_log()
+
 class CollectNews:
     def __init__(self, search_keyword, negative_keyword) :
         self.search_keyword=search_keyword
         self.negative_keyword=negative_keyword
         self.check_link=[]
         self.bot= telegram.Bot(token = token)
-
+        self.chatid= chatid
+        self.preview=preview
 
     def get_text(self, site:str, url:str) -> str :
         """
@@ -36,24 +37,20 @@ class CollectNews:
 
         response=requests.get(url, headers=headers)
         time.sleep(0.3)
+        if response.status_code == 200:
+            pass
+        else:
+            time.sleep(0.3)
+
+
         if site == '네이버':
             try:
-                if response.status_code == 200:
-                    soup2 = BeautifulSoup(response.content, "html.parser")
-                    title=soup2.select_one("#title_area > span").text
-                    text=soup2.select_one("#dic_area").text
 
-                    return title, text
-                else:
-                    logger.debug(f'get 요청실패 상태코드 : {response.status_code}')
-                    response=requests.get(url, headers=headers)
-                    time.sleep(2)
-                    soup2 = BeautifulSoup(response.content, "html.parser")
+                soup2 = BeautifulSoup(response.content, "html.parser")
+                title=soup2.select_one("#title_area > span").text
+                text=soup2.select_one("#dic_area").text
 
-                    title=soup2.select_one("#title_area > span").text
-                    text=soup2.select_one("#dic_area").text
-
-                    return title, text
+                return title, text
 
             except Exception as e:
                 title=''
@@ -163,10 +160,17 @@ class CollectNews:
         네이버 뉴스를 쓰레드로 돌리기위한 함수
         num : 네이버 카테고리 번호(0~4)
         """
+        import asyncio
         data=self.collect_naver(num)
+
+        temp_list=[]
         for keyword in self.search_keyword :
-            data['keyword'] = data['text'].apply(lambda x: keyword if keyword in x else 0  )
-        data=data[data["keyword"] != 0]
+            data['keyword'] = data['text'].apply(lambda text: keyword if keyword in text else 0  )
+            temp=data[data["keyword"] != 0]
+            temp_list.append(temp)
+
+        data=pd.concat(temp_list)
+        data=data.drop_duplicates()
         for i in self.negative_keyword:
             try:
                 data=data[data['text'].apply(lambda x: i not in x )]
@@ -184,11 +188,11 @@ class CollectNews:
                 검색단어=data.iloc[i,5]
                 if 링크 not in self.check_link:
 
-                    bot.sendMessage(
-                        chat_id = chatid,
+                    asyncio.run(self.bot.sendMessage(
+                        chat_id = self.chatid,
                         text=f'포털 : #{사이트}\n카테고리 : #{카테고리}\n검색단어 : #{검색단어}\n타이틀 : {타이틀}\n링크 : {링크}',
                         disable_web_page_preview=preview
-                        )
+                        ))
 
 
                     self.check_link.append(링크)
@@ -202,12 +206,15 @@ class CollectNews:
         """
         다음 뉴스 수집을 쓰레드로 돌리기 위한 함수
         """
+        import asyncio
         data=self.collect_daum()
-
-        for keyword in self.search_keyword:
-            data['keyword'] = data['text'].apply(lambda x: keyword if keyword in x else 0  )
-        data=data[data["keyword"] != 0]
-
+        temp_list=[]
+        for keyword in self.search_keyword :
+            data['keyword'] = data['text'].apply(lambda text: keyword if keyword in text else 0  )
+            temp=data[data["keyword"] != 0]
+            temp_list.append(temp)
+        data=pd.concat(temp_list)
+        data=data.drop_duplicates()
         for i in self.negative_keyword:
             try:
                 data=data[data['text'].apply(lambda x: i not in x )]
@@ -220,14 +227,17 @@ class CollectNews:
                 타이틀 = data.iloc[i,0]
                 텍스트 = data.iloc[i,1]
                 링크 = data.iloc[i,2]
-                사이트= data.iloc[i,3]
+                사이트 = data.iloc[i,3]
                 검색단어=data.iloc[i,4]
+                logger.info(f" ")
                 if 링크 not in self.check_link:
-                    bot.sendMessage(
-                        chat_id = chatid,
+                    asyncio.run(self.bot.sendMessage(
+                        chat_id = self.chatid,
                         text=f'포털 : #{사이트}\n검색단어 : #{검색단어}\n타이틀 : {타이틀}\n링크 : {링크}' ,
                         disable_web_page_preview=preview
-                        )
+                        ))
+                    logger.info(f"{검색단어} 메시지가 성공적으로 전달됐습니가")
+
                     self.check_link.append(링크)
             except Exception as e:
                 tb = traceback.format_exc()
