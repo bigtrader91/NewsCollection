@@ -8,7 +8,7 @@ from set_log import set_log
 def main():
     logger=set_log()
 
-    검색어=['속보', '단독', '인공지능','파이썬']
+    검색어=['속보', '단독', '인공지능','파이썬',"튀르키예","가수","동거녀","박용진"]
     제외단어=[ '골프','비트코인','대통령']
 
     collectnews=CollectNews(  검색어, 제외단어)
