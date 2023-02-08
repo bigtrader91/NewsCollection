@@ -1,6 +1,10 @@
 # NewsCollection
 네이버와 다음의 실시간 뉴스 수집
 
+
+![image](https://user-images.githubusercontent.com/88607278/217497060-34bbcd99-a7d6-40b1-8a72-266ef69c4d1a.png)
+
+
 ## 수집범위
 - 네이버 : 뉴스탭의 정치, 경제, 사회, 생활문화, IT/과학, 세계 (https://news.naver.com/)
 - 다음 : 전체기사(https://news.daum.net/breakingnews)
